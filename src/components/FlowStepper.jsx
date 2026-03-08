@@ -1,12 +1,13 @@
 import { Button, StatusBadge } from './ui'
 
-export default function FlowStepper({ steps, currentStep, stepStatuses, onRunStep }) {
+export default function FlowStepper({ steps, stepStatuses, onRunStep }) {
   return (
     <div className="space-y-2">
       {steps.map((step, i) => {
         const status = stepStatuses[step.id] || 'idle'
-        const canRun = status === 'idle' && (i === 0 || stepStatuses[steps[i - 1]?.id] === 'done')
-        const isActive = status === 'active'
+        const prevDone = i === 0 || stepStatuses[steps[i - 1]?.id] === 'done'
+        const canRun = status === 'idle' && prevDone && step.action !== 'auto'
+        const isAuto = step.action === 'auto'
 
         return (
           <div
@@ -15,7 +16,7 @@ export default function FlowStepper({ steps, currentStep, stepStatuses, onRunSte
               flex items-center gap-3 px-3.5 py-2.5 rounded-lg border transition-all
               ${status === 'done' ? 'bg-success/5 border-success/30' :
                 status === 'error' ? 'bg-danger/5 border-danger/30' :
-                isActive ? 'bg-warning/5 border-warning/30' :
+                status === 'active' ? 'bg-warning/5 border-warning/30' :
                 'bg-panel border-border'}
             `}
           >
@@ -27,10 +28,13 @@ export default function FlowStepper({ steps, currentStep, stepStatuses, onRunSte
               )}
             </div>
             <div className="flex-shrink-0">
-              {status === 'idle' && (
+              {status === 'idle' && !isAuto && (
                 <Button onClick={() => onRunStep(step.id)} disabled={!canRun} size="sm">
                   Run &rarr;
                 </Button>
+              )}
+              {status === 'idle' && isAuto && prevDone && (
+                <StatusBadge status="idle" label="Auto" />
               )}
               {status === 'active' && (
                 <StatusBadge status="active" label="Running..." />

@@ -132,8 +132,7 @@ export default function useOAuthFlow() {
       body: Object.fromEntries(new URL(authUrl).searchParams),
     })
 
-    setStepStatus('pkce', 'done')
-    setStepStatus('redirect', 'active')
+    setStepStatus('pkce', 'active')
 
     // Save state for after redirect
     saveFlowState({
@@ -166,11 +165,10 @@ export default function useOAuthFlow() {
     // Restore discovery
     setDiscovery(savedState.discovery)
     setStepStatus('discover', 'done')
-    setStepStatus('pkce', 'done')
-    setStepStatus('redirect', 'done')
+    setStepStatus('pkce', 'active')
 
     if (errorParam) {
-      setStepStatus('callback', 'error')
+      setStepStatus('pkce', 'error')
       setError(`Authorization error: ${errorParam} — ${errorDesc || 'No description'}`)
       logEntry({
         type: 'response',
@@ -184,14 +182,14 @@ export default function useOAuthFlow() {
     }
 
     if (!code) {
-      setStepStatus('callback', 'error')
+      setStepStatus('pkce', 'error')
       setError('No authorization code received in callback.')
       return null
     }
 
     // Validate state
     if (state !== savedState.state) {
-      setStepStatus('callback', 'error')
+      setStepStatus('pkce', 'error')
       setError(`State mismatch! Expected: ${savedState.state}, got: ${state}. Possible CSRF attack.`)
       return null
     }
@@ -205,8 +203,7 @@ export default function useOAuthFlow() {
       body: { code, state, state_valid: true },
     })
 
-    setStepStatus('callback', 'done')
-    setStepStatus('exchange', 'active')
+    setStepStatus('pkce', 'active')
 
     // Exchange code for tokens
     const { config, codeVerifier, discovery: savedDiscovery } = savedState
@@ -236,7 +233,7 @@ export default function useOAuthFlow() {
       })
 
       if (!result.success) {
-        setStepStatus('exchange', 'error')
+        setStepStatus('pkce', 'error')
         setError(`Token exchange failed: ${result.error} — ${result.errorDescription}`)
         logEntry({
           type: 'response',
@@ -278,12 +275,12 @@ export default function useOAuthFlow() {
         body: result.raw,
       })
 
-      setStepStatus('exchange', 'done')
+      setStepStatus('pkce', 'done')
       setStepStatus('inspect', 'done')
 
       return receivedTokens
     } catch (err) {
-      setStepStatus('exchange', 'error')
+      setStepStatus('pkce', 'error')
       setError(`Token exchange network error: ${err.message}`)
       logEntry({
         type: 'response',
@@ -416,10 +413,9 @@ export default function useOAuthFlow() {
     if (callbackTokens.access_token) analysis.access_token = analyzeToken(callbackTokens.access_token)
     if (callbackTokens.id_token) analysis.id_token = analyzeToken(callbackTokens.id_token)
     setTokenAnalysis(analysis)
-    // Mark all PKCE steps as done
+    // Mark all steps as done
     setStepStatuses({
-      discover: 'done', pkce: 'done', redirect: 'done',
-      callback: 'done', exchange: 'done', inspect: 'done',
+      discover: 'done', pkce: 'done', inspect: 'done',
     })
   }, [setStepStatus])
 

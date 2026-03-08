@@ -12,12 +12,9 @@ export const FLOWS = [
     description: 'Best for SPAs, mobile apps, and any public client. Uses code_verifier/code_challenge for security.',
     recommended: true,
     steps: [
-      { id: 'discover', label: 'Discover IDP Endpoints', description: 'Fetch .well-known/openid-configuration' },
-      { id: 'pkce', label: 'Generate PKCE & Build Auth URL', description: 'Create code_verifier → hash to code_challenge → build /authorize URL' },
-      { id: 'redirect', label: 'Redirect to IDP', description: 'Browser navigates to IDP login page' },
-      { id: 'callback', label: 'Handle Callback', description: 'IDP redirects back with authorization code' },
-      { id: 'exchange', label: 'Exchange Code for Tokens', description: 'POST code + code_verifier to /token endpoint' },
-      { id: 'inspect', label: 'Inspect Tokens', description: 'Decode and verify the received JWTs' },
+      { id: 'discover', label: 'Discover IDP Endpoints', description: 'Fetch .well-known/openid-configuration', action: 'manual' },
+      { id: 'pkce', label: 'Authenticate with IDP', description: 'Generate PKCE, redirect to IDP login, handle callback, exchange code for tokens', action: 'manual' },
+      { id: 'inspect', label: 'Inspect Tokens', description: 'Decode and verify the received JWTs', action: 'auto' },
     ],
   },
   {

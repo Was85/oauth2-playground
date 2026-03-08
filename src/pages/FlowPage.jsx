@@ -83,9 +83,9 @@ export default function FlowPage() {
   }, [flowId, providerId])
 
   return (
-    <div className="flex-1 flex overflow-hidden">
+    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
       {/* LEFT SIDEBAR: Provider + Config */}
-      <div className="w-64 border-r border-border bg-surface overflow-y-auto p-4 flex-shrink-0 space-y-4">
+      <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-border bg-surface overflow-y-auto p-4 flex-shrink-0 space-y-4 max-h-[40vh] lg:max-h-none">
         <ProviderSelector selectedId={providerId} onSelect={setProviderId} />
 
         <div className="border-t border-border pt-4">
@@ -287,7 +287,7 @@ export default function FlowPage() {
       </div>
 
       {/* RIGHT SIDEBAR: Token Inspector */}
-      <div className="w-80 border-l border-border bg-surface overflow-y-auto p-4 flex-shrink-0">
+      <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border bg-surface overflow-y-auto p-4 flex-shrink-0">
         <div className="text-[10px] text-muted uppercase tracking-widest font-semibold mb-3">
           Token Inspector
         </div>
