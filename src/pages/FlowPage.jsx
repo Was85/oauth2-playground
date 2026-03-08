@@ -12,6 +12,8 @@ import ConfigManager from '../components/ConfigManager'
 import TokenExpiryBar from '../components/TokenExpiryBar'
 import useTokenMonitor from '../hooks/useTokenMonitor'
 
+const UI_STATE_KEY = 'oauth-devtools:ui-state'
+
 export default function FlowPage() {
   const [providerId, setProviderId] = useState('custom')
   const [flowId, setFlowId] = useState('authorization_code_pkce')
@@ -32,9 +34,38 @@ export default function FlowPage() {
 
   const { expiryInfo } = useTokenMonitor(tokens)
 
-  // Pick up tokens from callback redirect
+  // Handle provider change: update selection and reset OAuth state + fields
+  const handleProviderChange = (newProviderId) => {
+    if (newProviderId === providerId) return
+    setProviderId(newProviderId)
+    setFields({})
+    reset()
+  }
+
+  // Handle flow change: update selection and reset OAuth state + fields
+  const handleFlowChange = (newFlowId) => {
+    if (newFlowId === flowId) return
+    setFlowId(newFlowId)
+    setFields({})
+    reset()
+  }
+
+  // Pick up tokens from callback redirect and restore UI state
   useEffect(() => {
     if (searchParams.get('from') === 'callback') {
+      // Restore UI state (provider, fields, scope) saved before redirect
+      const rawUiState = sessionStorage.getItem(UI_STATE_KEY)
+      if (rawUiState) {
+        sessionStorage.removeItem(UI_STATE_KEY)
+        try {
+          const uiState = JSON.parse(rawUiState)
+          if (uiState.providerId) setProviderId(uiState.providerId)
+          if (uiState.flowId) setFlowId(uiState.flowId)
+          if (uiState.fields) setFields(uiState.fields)
+          if (uiState.scope) setScope(uiState.scope)
+        } catch { /* ignore */ }
+      }
+
       const rawTokens = sessionStorage.getItem('oauth-devtools:callback-tokens')
       const rawDiscovery = sessionStorage.getItem('oauth-devtools:callback-discovery')
       if (rawTokens) {
@@ -68,6 +99,8 @@ export default function FlowPage() {
       await discover(issuerUrl)
     }
     else if (stepId === 'pkce') {
+      // Save UI state so it survives the browser redirect
+      sessionStorage.setItem(UI_STATE_KEY, JSON.stringify({ providerId, flowId, fields, scope }))
       await startPKCEFlow({
         clientId,
         redirectUri,
@@ -84,16 +117,11 @@ export default function FlowPage() {
     }
   }
 
-  // Switch flow resets state
-  useEffect(() => {
-    reset()
-  }, [flowId, providerId, reset])
-
   return (
     <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
       {/* LEFT SIDEBAR: Provider + Config */}
       <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-border bg-surface overflow-y-auto p-4 flex-shrink-0 space-y-4 max-h-[40vh] lg:max-h-none">
-        <ProviderSelector selectedId={providerId} onSelect={setProviderId} />
+        <ProviderSelector selectedId={providerId} onSelect={handleProviderChange} />
 
         <div className="border-t border-border pt-4">
           <div className="text-[10px] text-muted uppercase tracking-widest font-semibold mb-3">
@@ -198,7 +226,7 @@ export default function FlowPage() {
                 key={f.id}
                 label={f.shortName}
                 active={flowId === f.id}
-                onClick={() => setFlowId(f.id)}
+                onClick={() => handleFlowChange(f.id)}
               />
             ))}
           </div>

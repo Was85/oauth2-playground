@@ -70,6 +70,7 @@ export default function useOAuthFlow() {
       return summary
     } catch (err) {
       setDiscoveryError(err.message)
+      setError(err.message)
       logEntry({
         type: 'response',
         status: 0,
