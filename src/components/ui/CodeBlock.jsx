@@ -5,8 +5,11 @@ export default function CodeBlock({ children, className = '', copyable }) {
 
   const handleCopy = () => {
     navigator.clipboard.writeText(typeof children === 'string' ? children : '')
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch(() => {})
   }
 
   return (

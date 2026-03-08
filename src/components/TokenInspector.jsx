@@ -48,6 +48,12 @@ export default function TokenInspector({ tokens = {}, onVerify }) {
       {/* Token tabs */}
       <div className="flex gap-1.5 flex-wrap">
         {tokenEntries.map(t => {
+          const colorMap = {
+            accent: 'bg-accent/15 text-accent border-accent/30',
+            accent2: 'bg-accent2/15 text-accent2 border-accent2/30',
+            warning: 'bg-warning/15 text-warning border-warning/30',
+            success: 'bg-success/15 text-success border-success/30',
+          }
           const color = t.key.includes('access') ? 'accent'
             : t.key.includes('id') ? 'accent2'
             : t.key.includes('refresh') ? 'warning' : 'success'
@@ -59,7 +65,7 @@ export default function TokenInspector({ tokens = {}, onVerify }) {
                 px-2.5 py-1 rounded text-[11px] font-mono font-semibold
                 border transition-all cursor-pointer
                 ${active === t.key
-                  ? `bg-${color}/15 text-${color} border-${color}/30`
+                  ? colorMap[color]
                   : 'bg-panel text-muted border-border hover:text-text'
                 }
               `}

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import AppShell from './components/AppShell'
 import FlowPage from './pages/FlowPage'
 import CallbackPage from './pages/CallbackPage'
@@ -15,6 +15,7 @@ export default function App() {
         <Route path="/decoder" element={<DecoderPage />} />
         <Route path="/compliance" element={<CompliancePage />} />
         <Route path="/export" element={<CodeExportPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>
   )

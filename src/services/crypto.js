@@ -106,25 +106,10 @@ export function buildAuthorizationUrl({
 }
 
 /**
- * Parse the callback URL to extract code, state, and error.
- * @param {string} url - The full callback URL
- * @returns {{ code?: string, state?: string, error?: string, errorDescription?: string }}
+ * Base64-encode a UTF-8 string (safe for non-ASCII characters).
  */
-export function parseCallbackUrl(url) {
-  const parsed = new URL(url)
-  const params = parsed.searchParams
-
-  // Check URL fragment too (for implicit flow)
-  const hashParams = new URLSearchParams(parsed.hash.replace('#', ''))
-
-  return {
-    code: params.get('code') || hashParams.get('code') || undefined,
-    state: params.get('state') || hashParams.get('state') || undefined,
-    error: params.get('error') || hashParams.get('error') || undefined,
-    errorDescription: params.get('error_description') || hashParams.get('error_description') || undefined,
-    accessToken: hashParams.get('access_token') || undefined,
-    idToken: hashParams.get('id_token') || undefined,
-  }
+function base64EncodeUtf8(str) {
+  return btoa(unescape(encodeURIComponent(str)))
 }
 
 /**
@@ -159,7 +144,7 @@ export async function exchangeCodeForTokens({
 
   // If client_secret is provided, use Basic auth
   if (clientSecret) {
-    const credentials = btoa(`${clientId}:${clientSecret}`)
+    const credentials = base64EncodeUtf8(`${clientId}:${clientSecret}`)
     headers['Authorization'] = `Basic ${credentials}`
     body.delete('client_id') // client_id is in the auth header
   }

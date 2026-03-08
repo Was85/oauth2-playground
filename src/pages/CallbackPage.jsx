@@ -1,6 +1,19 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import useOAuthFlow from '../hooks/useOAuthFlow'
+import { exchangeCodeForTokens } from '../services/crypto'
+
+const FLOW_STATE_KEY = 'oauth-devtools:flow-state'
+
+function loadFlowState() {
+  const raw = sessionStorage.getItem(FLOW_STATE_KEY)
+  if (!raw) return null
+  sessionStorage.removeItem(FLOW_STATE_KEY)
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
 
 export default function CallbackPage() {
   const navigate = useNavigate()
@@ -9,13 +22,12 @@ export default function CallbackPage() {
   const [message, setMessage] = useState('Processing OAuth callback...')
   const processedRef = useRef(false)
 
-  const { handleCallback } = useOAuthFlow()
-
   useEffect(() => {
     if (processedRef.current) return
     processedRef.current = true
 
     const code = searchParams.get('code')
+    const returnedState = searchParams.get('state')
     const error = searchParams.get('error')
     const errorDescription = searchParams.get('error_description')
 
@@ -31,20 +43,51 @@ export default function CallbackPage() {
       return
     }
 
-    // Process the callback
+    const savedState = loadFlowState()
+    if (!savedState) {
+      setStatus('error')
+      setMessage('No flow state found. The flow may have been interrupted.')
+      return
+    }
+
+    // Validate CSRF state
+    if (returnedState !== savedState.state) {
+      setStatus('error')
+      setMessage(`State mismatch! Expected: ${savedState.state}, got: ${returnedState}. Possible CSRF attack.`)
+      return
+    }
+
     async function process() {
       try {
-        const result = await handleCallback(window.location.href)
-        if (result) {
-          setStatus('success')
-          setMessage('Tokens received! Redirecting to flow page...')
-          // Store tokens in sessionStorage for the flow page to pick up
-          sessionStorage.setItem('oauth-devtools:callback-tokens', JSON.stringify(result))
-          setTimeout(() => navigate('/?from=callback'), 1500)
-        } else {
+        const result = await exchangeCodeForTokens({
+          tokenEndpoint: savedState.discovery.tokenEndpoint,
+          code,
+          redirectUri: savedState.config.redirectUri,
+          clientId: savedState.config.clientId,
+          codeVerifier: savedState.codeVerifier,
+        })
+
+        if (!result.success) {
           setStatus('error')
-          setMessage('Token exchange failed. Check the flow page for details.')
+          setMessage(`Token exchange failed: ${result.error} — ${result.errorDescription}`)
+          return
         }
+
+        const receivedTokens = {
+          access_token: result.accessToken,
+          id_token: result.idToken,
+          refresh_token: result.refreshToken,
+          token_type: result.tokenType,
+          expires_in: result.expiresIn,
+          scope: result.scope,
+        }
+
+        setStatus('success')
+        setMessage('Tokens received! Redirecting to flow page...')
+        sessionStorage.setItem('oauth-devtools:callback-tokens', JSON.stringify(receivedTokens))
+        // Also pass discovery so FlowPage can restore it
+        sessionStorage.setItem('oauth-devtools:callback-discovery', JSON.stringify(savedState.discovery))
+        setTimeout(() => navigate('/?from=callback'), 1500)
       } catch (err) {
         setStatus('error')
         setMessage(`Callback processing failed: ${err.message}`)
@@ -52,7 +95,7 @@ export default function CallbackPage() {
     }
 
     process()
-  }, [])
+  }, [searchParams, navigate])
 
   return (
     <div className="flex-1 flex items-center justify-center">

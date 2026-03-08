@@ -35,12 +35,14 @@ export default function FlowPage() {
   // Pick up tokens from callback redirect
   useEffect(() => {
     if (searchParams.get('from') === 'callback') {
-      const raw = sessionStorage.getItem('oauth-devtools:callback-tokens')
-      if (raw) {
+      const rawTokens = sessionStorage.getItem('oauth-devtools:callback-tokens')
+      const rawDiscovery = sessionStorage.getItem('oauth-devtools:callback-discovery')
+      if (rawTokens) {
         sessionStorage.removeItem('oauth-devtools:callback-tokens')
+        sessionStorage.removeItem('oauth-devtools:callback-discovery')
         try {
-          const callbackTokens = JSON.parse(raw)
-          setTokensFromCallback(callbackTokens)
+          const callbackTokens = JSON.parse(rawTokens)
+          setTokensFromCallback(callbackTokens, rawDiscovery ? JSON.parse(rawDiscovery) : null)
         } catch { /* ignore */ }
       }
     }
@@ -85,7 +87,7 @@ export default function FlowPage() {
   // Switch flow resets state
   useEffect(() => {
     reset()
-  }, [flowId, providerId])
+  }, [flowId, providerId, reset])
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">

@@ -6,7 +6,6 @@
 const STORAGE_KEYS = {
   CONFIGS: 'oauth-devtools:configs',
   ACTIVE_CONFIG: 'oauth-devtools:active-config',
-  HISTORY: 'oauth-devtools:history',
 }
 
 /**
@@ -64,41 +63,6 @@ export function setActiveConfig(name) {
  */
 export function getActiveConfig() {
   return localStorage.getItem(STORAGE_KEYS.ACTIVE_CONFIG)
-}
-
-/**
- * Add a request/response entry to history.
- * @param {object} entry
- */
-export function addToHistory(entry) {
-  const history = loadHistory()
-  history.unshift({
-    ...entry,
-    timestamp: new Date().toISOString(),
-    id: crypto.randomUUID(),
-  })
-  // Keep last 100 entries
-  if (history.length > 100) history.length = 100
-  localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history))
-}
-
-/**
- * Load request/response history.
- * @returns {Array}
- */
-export function loadHistory() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]')
-  } catch {
-    return []
-  }
-}
-
-/**
- * Clear all history.
- */
-export function clearHistory() {
-  localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify([]))
 }
 
 /**

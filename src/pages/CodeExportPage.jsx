@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { generateCode, STACKS } from '../services/code-generator'
 import { Button, Input, CodeBlock, Pill } from '../components/ui'
 
@@ -9,6 +9,11 @@ export default function CodeExportPage() {
   const [clientId, setClientId] = useState('')
   const [scope, setScope] = useState('openid profile email')
   const [redirectUri, setRedirectUri] = useState(window.location.origin + '/callback')
+
+  // Reset flow when switching to React (no M2M support)
+  useEffect(() => {
+    if (stack === 'react') setFlow('authorization_code_pkce')
+  }, [stack])
 
   const result = useMemo(() => {
     if (!issuerUrl || !clientId) return null
@@ -110,7 +115,7 @@ export default function CodeExportPage() {
                   <span className="text-[10px] text-muted ml-2">{result.description}</span>
                 </div>
                 <Button
-                  onClick={() => navigator.clipboard.writeText(result.code)}
+                  onClick={() => navigator.clipboard.writeText(result.code).catch(() => {})}
                   variant="secondary"
                   size="sm"
                 >

@@ -11,7 +11,6 @@ export default function ConfigManager({ currentConfig, onLoadConfig }) {
   const [showSave, setShowSave] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [shareUrl, setShareUrl] = useState('')
-  const [importText, setImportText] = useState('')
   const [activeConfig, setActive] = useState(null)
 
   useEffect(() => {
@@ -45,14 +44,14 @@ export default function ConfigManager({ currentConfig, onLoadConfig }) {
   }
 
   const handleShare = () => {
-    const encoded = btoa(JSON.stringify(currentConfig))
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(currentConfig))))
     const url = `${window.location.origin}?config=${encodeURIComponent(encoded)}`
     setShareUrl(url)
     setShowShare(true)
   }
 
   const handleCopyShareUrl = () => {
-    navigator.clipboard.writeText(shareUrl)
+    navigator.clipboard.writeText(shareUrl).catch(() => {})
   }
 
   const handleExport = () => {
@@ -64,17 +63,6 @@ export default function ConfigManager({ currentConfig, onLoadConfig }) {
     a.download = 'oauth-devtools-configs.json'
     a.click()
     URL.revokeObjectURL(url)
-  }
-
-  const handleImport = () => {
-    try {
-      const data = JSON.parse(importText)
-      importData(data)
-      setConfigs(loadAllConfigs())
-      setImportText('')
-    } catch {
-      // invalid JSON, ignore
-    }
   }
 
   const configNames = Object.keys(configs)

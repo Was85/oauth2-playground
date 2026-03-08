@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 /**
  * Hook that monitors token expiry with a live countdown.
@@ -19,10 +19,10 @@ export default function useTokenMonitor(tokens) {
     return () => clearInterval(interval)
   }, [tokens])
 
-  const expiryInfo = useCallback(() => {
+  const info = useMemo(() => {
     if (!tokens) return {}
 
-    const info = {}
+    const result = {}
     const now = Math.floor(Date.now() / 1000)
 
     for (const [key, value] of Object.entries(tokens)) {
@@ -33,12 +33,12 @@ export default function useTokenMonitor(tokens) {
       try {
         const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
         if (!payload.exp) {
-          info[key] = { hasExpiry: false }
+          result[key] = { hasExpiry: false }
           continue
         }
 
         const expiresIn = payload.exp - now
-        info[key] = {
+        result[key] = {
           hasExpiry: true,
           exp: payload.exp,
           expiresAt: new Date(payload.exp * 1000).toISOString(),
@@ -56,10 +56,9 @@ export default function useTokenMonitor(tokens) {
       }
     }
 
-    return info
+    return result
   }, [tokens, tick])
 
-  const info = expiryInfo()
   const values = Object.values(info).filter(v => v.hasExpiry)
 
   return {

@@ -3,8 +3,7 @@ import { fetchDiscoveryDocument, summarizeDiscovery } from '../services/oidc-dis
 import {
   generateCodeVerifier, generateCodeChallenge,
   generateState, generateNonce,
-  buildAuthorizationUrl, exchangeCodeForTokens,
-  clientCredentialsGrant
+  buildAuthorizationUrl, clientCredentialsGrant
 } from '../services/crypto'
 import { decodeToken, analyzeToken, verifyToken } from '../services/token-service'
 
@@ -15,20 +14,6 @@ const FLOW_STATE_KEY = 'oauth-devtools:flow-state'
  */
 function saveFlowState(state) {
   sessionStorage.setItem(FLOW_STATE_KEY, JSON.stringify(state))
-}
-
-/**
- * Loads and clears flow state from sessionStorage (after redirect back).
- */
-function loadFlowState() {
-  const raw = sessionStorage.getItem(FLOW_STATE_KEY)
-  if (!raw) return null
-  sessionStorage.removeItem(FLOW_STATE_KEY)
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
 }
 
 export default function useOAuthFlow() {
@@ -148,152 +133,6 @@ export default function useOAuthFlow() {
     window.location.href = authUrl
   }, [discovery, logEntry, setStepStatus])
 
-  // ── Step: Handle Callback ───────────────────────────────────────────────────
-  const handleCallback = useCallback(async (callbackUrl) => {
-    const savedState = loadFlowState()
-    if (!savedState) {
-      setError('No flow state found. The flow may have been interrupted.')
-      return null
-    }
-
-    const url = new URL(callbackUrl)
-    const code = url.searchParams.get('code')
-    const state = url.searchParams.get('state')
-    const errorParam = url.searchParams.get('error')
-    const errorDesc = url.searchParams.get('error_description')
-
-    // Restore discovery
-    setDiscovery(savedState.discovery)
-    setStepStatus('discover', 'done')
-    setStepStatus('pkce', 'active')
-
-    if (errorParam) {
-      setStepStatus('pkce', 'error')
-      setError(`Authorization error: ${errorParam} — ${errorDesc || 'No description'}`)
-      logEntry({
-        type: 'response',
-        status: 400,
-        label: 'Authorization Error',
-        description: errorDesc || errorParam,
-        body: { error: errorParam, error_description: errorDesc },
-        isError: true,
-      })
-      return null
-    }
-
-    if (!code) {
-      setStepStatus('pkce', 'error')
-      setError('No authorization code received in callback.')
-      return null
-    }
-
-    // Validate state
-    if (state !== savedState.state) {
-      setStepStatus('pkce', 'error')
-      setError(`State mismatch! Expected: ${savedState.state}, got: ${state}. Possible CSRF attack.`)
-      return null
-    }
-
-    logEntry({
-      type: 'response',
-      status: 302,
-      url: callbackUrl,
-      label: 'Callback Received (Authorization Code)',
-      description: 'IDP redirected back with an authorization code. State parameter validated.',
-      body: { code, state, state_valid: true },
-    })
-
-    setStepStatus('pkce', 'active')
-
-    // Exchange code for tokens
-    const { config, codeVerifier, discovery: savedDiscovery } = savedState
-
-    logEntry({
-      type: 'request',
-      method: 'POST',
-      url: savedDiscovery.tokenEndpoint,
-      label: 'Token Exchange',
-      description: 'Exchanging authorization code + code_verifier for tokens.',
-      body: {
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: config.redirectUri,
-        client_id: config.clientId,
-        code_verifier: codeVerifier,
-      },
-    })
-
-    try {
-      const result = await exchangeCodeForTokens({
-        tokenEndpoint: savedDiscovery.tokenEndpoint,
-        code,
-        redirectUri: config.redirectUri,
-        clientId: config.clientId,
-        codeVerifier,
-      })
-
-      if (!result.success) {
-        setStepStatus('pkce', 'error')
-        setError(`Token exchange failed: ${result.error} — ${result.errorDescription}`)
-        logEntry({
-          type: 'response',
-          status: result.status,
-          label: 'Token Exchange Failed',
-          description: result.errorDescription,
-          body: result.raw,
-          isError: true,
-        })
-        return null
-      }
-
-      const receivedTokens = {
-        access_token: result.accessToken,
-        id_token: result.idToken,
-        refresh_token: result.refreshToken,
-        token_type: result.tokenType,
-        expires_in: result.expiresIn,
-        scope: result.scope,
-      }
-
-      setTokens(receivedTokens)
-
-      // Analyze tokens
-      const analysis = {}
-      if (result.accessToken) analysis.access_token = analyzeToken(result.accessToken)
-      if (result.idToken) analysis.id_token = analyzeToken(result.idToken)
-      setTokenAnalysis(analysis)
-
-      logEntry({
-        type: 'response',
-        status: 200,
-        label: 'Tokens Received',
-        description: `Got: ${[
-          result.accessToken && 'access_token',
-          result.idToken && 'id_token',
-          result.refreshToken && 'refresh_token',
-        ].filter(Boolean).join(', ')}`,
-        body: result.raw,
-      })
-
-      setStepStatus('pkce', 'done')
-      setStepStatus('inspect', 'done')
-
-      return receivedTokens
-    } catch (err) {
-      setStepStatus('pkce', 'error')
-      setError(`Token exchange network error: ${err.message}`)
-      logEntry({
-        type: 'response',
-        status: 0,
-        label: 'Token Exchange Network Error',
-        description: err.message,
-        body: { error: err.message },
-        isError: true,
-      })
-      return null
-    }
-  }, [logEntry, setStepStatus])
-
   // ── Client Credentials Flow ─────────────────────────────────────────────────
   const startClientCredentials = useCallback(async (config) => {
     if (!discovery) return null
@@ -407,17 +246,17 @@ export default function useOAuthFlow() {
   }, [discovery, logEntry])
 
   // ── Set tokens from callback (after redirect back) ─────────────────────────
-  const setTokensFromCallback = useCallback((callbackTokens) => {
+  const setTokensFromCallback = useCallback((callbackTokens, callbackDiscovery) => {
     setTokens(callbackTokens)
     const analysis = {}
     if (callbackTokens.access_token) analysis.access_token = analyzeToken(callbackTokens.access_token)
     if (callbackTokens.id_token) analysis.id_token = analyzeToken(callbackTokens.id_token)
     setTokenAnalysis(analysis)
-    // Mark all steps as done
+    if (callbackDiscovery) setDiscovery(callbackDiscovery)
     setStepStatuses({
       discover: 'done', pkce: 'done', inspect: 'done',
     })
-  }, [setStepStatus])
+  }, [])
 
   // ── Reset ───────────────────────────────────────────────────────────────────
   const reset = useCallback(() => {
@@ -446,7 +285,6 @@ export default function useOAuthFlow() {
     // Actions
     discover,
     startPKCEFlow,
-    handleCallback,
     startClientCredentials,
     verifyTokenSignature,
     setTokensFromCallback,
