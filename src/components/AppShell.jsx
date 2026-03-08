@@ -1,6 +1,15 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+
+const NAV_ITEMS = [
+  { to: '/', label: 'Flows' },
+  { to: '/decoder', label: 'JWT Decoder' },
+  { to: '/compliance', label: 'Compliance' },
+  { to: '/export', label: 'Export' },
+]
 
 export default function AppShell({ children }) {
+  const location = useLocation()
+
   return (
     <div className="min-h-screen bg-bg text-text font-mono flex flex-col">
       {/* Header */}
@@ -14,10 +23,23 @@ export default function AppShell({ children }) {
             <div className="text-[10px] text-muted tracking-widest uppercase">Test Real OAuth Flows</div>
           </div>
         </div>
-        <nav className="ml-auto flex gap-2">
-          <Link to="/" className="px-4 py-1.5 text-xs font-semibold text-muted hover:text-accent transition-colors">
-            Flows
-          </Link>
+        <nav className="ml-auto flex gap-1">
+          {NAV_ITEMS.map(({ to, label }) => {
+            const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                  isActive
+                    ? 'text-accent bg-accent/10'
+                    : 'text-muted hover:text-accent'
+                }`}
+              >
+                {label}
+              </Link>
+            )
+          })}
         </nav>
       </header>
 

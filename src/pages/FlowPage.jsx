@@ -8,6 +8,9 @@ import TokenInspector from '../components/TokenInspector'
 import HttpLog from '../components/HttpLog'
 import FlowStepper from '../components/FlowStepper'
 import { Button, Input, Pill, Card, Tag } from '../components/ui'
+import ConfigManager from '../components/ConfigManager'
+import TokenExpiryBar from '../components/TokenExpiryBar'
+import useTokenMonitor from '../hooks/useTokenMonitor'
 
 export default function FlowPage() {
   const [providerId, setProviderId] = useState('custom')
@@ -26,6 +29,8 @@ export default function FlowPage() {
     discover, startPKCEFlow, startClientCredentials, verifyTokenSignature,
     reset, clearLog, clearError, setTokensFromCallback,
   } = useOAuthFlow()
+
+  const { expiryInfo } = useTokenMonitor(tokens)
 
   // Pick up tokens from callback redirect
   useEffect(() => {
@@ -141,6 +146,19 @@ export default function FlowPage() {
             </div>
           </Card>
         )}
+
+        {/* Config manager */}
+        <div className="border-t border-border pt-4">
+          <ConfigManager
+            currentConfig={{ providerId, flowId, fields, scope }}
+            onLoadConfig={(config) => {
+              if (config.providerId) setProviderId(config.providerId)
+              if (config.flowId) setFlowId(config.flowId)
+              if (config.fields) setFields(config.fields)
+              if (config.scope) setScope(config.scope)
+            }}
+          />
+        </div>
 
         {/* Provider setup guide */}
         {provider?.setupGuide && (
@@ -291,6 +309,7 @@ export default function FlowPage() {
         <div className="text-[10px] text-muted uppercase tracking-widest font-semibold mb-3">
           Token Inspector
         </div>
+        <TokenExpiryBar expiryInfo={expiryInfo} />
         <TokenInspector
           tokens={tokens}
           onVerify={verifyTokenSignature}
