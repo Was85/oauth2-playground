@@ -1,11 +1,17 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+@import "tailwindcss";
 
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+@theme {
+  --color-bg: #0a0e1a;
+  --color-surface: #111827;
+  --color-panel: #161d2e;
+  --color-border: #1e2d45;
+  --color-accent: #00d4ff;
+  --color-accent2: #7c3aed;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-text: #e2e8f0;
+  --color-muted: #64748b;
+  --color-code: #94a3b8;
+  --font-mono: 'IBM Plex Mono', 'Fira Code', 'Courier New', monospace;
 }
