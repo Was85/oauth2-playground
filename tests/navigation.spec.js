@@ -58,9 +58,11 @@ test.describe('Navigation', () => {
     await expect(flowsLink).toHaveClass(/text-muted/);
   });
 
-  test('unknown routes redirect to /', async ({ page }) => {
+  test('unknown routes show 404 page', async ({ page }) => {
     await page.goto('/nonexistent-route');
-    await expect(page).toHaveURL('/');
+    await expect(page.getByText('404')).toBeVisible();
+    await expect(page.getByText('Page Not Found')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Back to Flows' })).toBeVisible();
   });
 
   test('header remains visible on all pages', async ({ page }) => {

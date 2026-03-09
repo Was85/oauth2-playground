@@ -153,6 +153,8 @@ test.describe('Page Titles and Headings', () => {
 test.describe('Focus Management', () => {
   test('inputs are focusable on FlowPage', async ({ page }) => {
     await page.goto('/');
+    // Wait for lazy-loaded FlowPage content to render
+    await expect(page.getByText('Authorization Code + PKCE')).toBeVisible();
 
     const inputs = page.locator('input');
     const count = await inputs.count();

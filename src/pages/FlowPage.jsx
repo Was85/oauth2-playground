@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getProvider } from '../config/providers'
-import { FLOWS, createDefaultConfig, DEFAULT_REDIRECT_URI } from '../config/defaults'
+import { FLOWS, DEFAULT_REDIRECT_URI } from '../config/defaults'
 import useOAuthFlow from '../hooks/useOAuthFlow'
 import ProviderSelector from '../components/ProviderSelector'
 import TokenInspector from '../components/TokenInspector'
@@ -27,7 +27,7 @@ export default function FlowPage() {
   const [searchParams] = useSearchParams()
 
   const {
-    discovery, discoveryError, stepStatuses, tokens, log, error, pkceValues,
+    discovery, stepStatuses, tokens, log, error, pkceValues,
     discover, startPKCEFlow, startClientCredentials, verifyTokenSignature,
     reset, clearLog, clearError, setTokensFromCallback,
   } = useOAuthFlow()

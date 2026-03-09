@@ -1,0 +1,71 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - '*'
+
+variables:
+  containerRegistry: 'YOUR_CONTAINER_REGISTRY'
+  imageName: 'YOUR_IMAGE_NAME'
+
+stages:
+  - stage: BuildAndTest
+    displayName: 'Build & Test'
+    pool:
+      vmImage: 'ubuntu-latest'
+    jobs:
+      - job: BuildAndTest
+        displayName: 'Build and run tests'
+        steps:
+          - task: UseNode@1
+            displayName: 'Use Node.js 22'
+            inputs:
+              version: '22.x'
+
+          - script: npm ci
+            displayName: 'Install dependencies'
+
+          - script: npx vite build
+            displayName: 'Build app'
+
+          - script: npx playwright install --with-deps chromium
+            displayName: 'Install Playwright browser'
+
+          - script: npx playwright test --grep-invert "PKCE Flow with Keycloak"
+            displayName: 'Run Playwright tests'
+            env:
+              CI: 'true'
+
+          - publish: $(System.DefaultWorkingDirectory)/playwright-report
+            artifact: playwright-report
+            displayName: 'Publish test report'
+            condition: always()
+
+          - publish: $(System.DefaultWorkingDirectory)/dist
+            artifact: dist
+            displayName: 'Publish build output'
+
+  - stage: DockerBuild
+    displayName: 'Docker Build & Push'
+    dependsOn: BuildAndTest
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    pool:
+      vmImage: 'ubuntu-latest'
+    jobs:
+      - job: DockerBuild
+        displayName: 'Build and push Docker image'
+        steps:
+          - task: Docker@2
+            displayName: 'Build and push image'
+            inputs:
+              containerRegistry: $(containerRegistry)
+              repository: $(imageName)
+              command: buildAndPush
+              Dockerfile: '**/Dockerfile'
+              tags: |
+                $(Build.BuildNumber)
+                latest
